@@ -5,22 +5,28 @@ import { getWeekDays, formatDate } from '../../utils/dateUtils';
 import { ChartData } from 'chart.js';
 
 export const WeeklyTrend: React.FC = () => {
-  const { pomodoroSessions } = useStore();
+  const { tasks } = useStore();
   const weekDays = getWeekDays();
 
   const data: ChartData<'line'> = {
     labels: weekDays.map(d => formatDate(d, 'EEE')),
     datasets: [
       {
-        label: 'Focus Minutes',
+        label: 'Completed Tasks',
         data: weekDays.map(day => {
             const dateStr = formatDate(day);
-            return pomodoroSessions
-                .filter(s => s.date === dateStr && s.completed)
-                .reduce((acc, curr) => acc + curr.focusMinutes, 0);
+            // Count tasks completed on this specific day
+            // Note: This relies on completedAt timestamp. 
+            // If completedAt is missing, we might fallback to dueDate if status is completed, 
+            // but accurate trends need completedAt.
+            return tasks.filter(t => 
+                t.status === 'completed' && 
+                t.completedAt && 
+                t.completedAt.startsWith(dateStr)
+            ).length;
         }),
-        borderColor: '#8B5CF6',
-        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+        borderColor: '#10B981',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
         fill: true,
         tension: 0.4,
       },
@@ -36,13 +42,16 @@ export const WeeklyTrend: React.FC = () => {
       scales: {
           y: {
               beginAtZero: true,
+              ticks: {
+                  stepSize: 1
+              }
           }
       }
   };
 
   return (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
-      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Focus Time Trend (Minutes)</h3>
+      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Tasks Completed Trend</h3>
       <div className="h-64">
         <Line data={data} options={options} />
       </div>
