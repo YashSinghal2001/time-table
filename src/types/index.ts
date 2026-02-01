@@ -52,3 +52,4 @@ export interface AppData {
 
 export interface AppState extends AppData {
 
+}
