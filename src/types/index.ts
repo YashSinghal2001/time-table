@@ -26,28 +26,16 @@ export interface TimetableEntry {
     completedDates?: string[]; // For recurring tasks
 }
 
-export interface PomodoroSession {
-    id: string;
-    date: string; // YYYY-MM-DD
-    focusMinutes: number;
-    breakMinutes: number;
-    completed: boolean;
-    completedAt: string; // ISO timestamp
-}
-
 export interface AppSettings {
-    theme: Theme;
-    notifications: boolean;
-    pomodoroFocus: number;
-    pomodoroBreak: number;
+  theme: Theme;
+  notifications: boolean;
 }
 
 export interface AppData {
-    tasks: Task[];
-    timetable: TimetableEntry[];
-    pomodoroSessions: PomodoroSession[];
-    settings: AppSettings;
-    notes: string;
+  tasks: Task[];
+  timetable: TimetableEntry[];
+  settings: AppSettings;
+  notes: string;
 }
 
 export interface AppState extends AppData {}

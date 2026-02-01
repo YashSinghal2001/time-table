@@ -1,18 +1,15 @@
-import { AppData, Task, TimetableEntry, PomodoroSession, AppSettings } from '../types';
+import { AppData, Task, TimetableEntry, AppSettings } from '../types';
 
 const STORAGE_KEY = 'productivity_app_data';
 
 const defaultSettings: AppSettings = {
   theme: 'light',
   notifications: true,
-  pomodoroFocus: 25,
-  pomodoroBreak: 5,
 };
 
 const defaultData: AppData = {
   tasks: [],
   timetable: [],
-  pomodoroSessions: [],
   settings: defaultSettings,
   notes: '',
 };
@@ -55,12 +52,6 @@ export const saveTasks = (tasks: Task[]) => {
 export const saveTimetable = (timetable: TimetableEntry[]) => {
   const data = loadData();
   data.timetable = timetable;
-  saveData(data);
-};
-
-export const savePomodoroSessions = (sessions: PomodoroSession[]) => {
-  const data = loadData();
-  data.pomodoroSessions = sessions;
   saveData(data);
 };
 

@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { AppData, Task, TimetableEntry, PomodoroSession, AppSettings, Priority, Category, TaskStatus } from "../types";
-import { loadData, saveTasks, saveTimetable, savePomodoroSessions, saveSettings, saveNotes } from "../utils/localStorage";
+import { AppData, Task, TimetableEntry, AppSettings, Priority, Category, TaskStatus } from "../types";
+import { loadData, saveTasks, saveTimetable, saveSettings, saveNotes } from "../utils/localStorage";
 
 interface AppState extends AppData {
     addTask: (task: Task) => void;
@@ -12,8 +12,6 @@ interface AppState extends AppData {
     updateTimetableEntry: (id: string, updates: Partial<TimetableEntry>) => void;
     deleteTimetableEntry: (id: string) => void;
     toggleTimetableEntryCompletion: (id: string, date?: string) => void;
-
-    addPomodoroSession: (session: PomodoroSession) => void;
 
     updateSettings: (updates: Partial<AppSettings>) => void;
 
@@ -114,13 +112,6 @@ export const useStore = create<AppState>((set) => ({
             });
             saveTimetable(newTimetable);
             return { timetable: newTimetable };
-        }),
-
-    addPomodoroSession: (session) =>
-        set((state) => {
-            const newSessions = [...state.pomodoroSessions, session];
-            savePomodoroSessions(newSessions);
-            return { pomodoroSessions: newSessions };
         }),
 
     updateSettings: (updates) =>
