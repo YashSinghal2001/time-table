@@ -2,7 +2,6 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, CheckSquare, Calendar, Timer, BarChart2 } from 'lucide-react';
 import { cn } from '../utils/cn';
-import { ThemeToggle } from './ThemeToggle';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -44,7 +43,6 @@ export const Navigation: React.FC = () => {
 
       <div className="hidden md:flex items-center justify-between px-2 mt-auto pt-4 border-t dark:border-gray-800">
           <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Theme</span>
-          <ThemeToggle />
       </div>
     </nav>
   );

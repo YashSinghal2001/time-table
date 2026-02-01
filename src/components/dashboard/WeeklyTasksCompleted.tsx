@@ -29,7 +29,7 @@ export const WeeklyTasksCompleted: React.FC = () => {
             });
 
             const completedCount = dayTasks.filter(t => {
-                if (t.repeat && t.repeat !== 'none') {
+                if (t.repeat) {
                     return t.completedDates?.includes(dayStr);
                 }
                 return t.completed;

@@ -255,22 +255,17 @@ export const UnifiedTimetable: React.FC = () => {
                                         const entries = timetable.filter((e) => {
                                             if (e.timeSlot !== time) return false;
 
-                                            // 1. One Time: exact match
-                                            if (!e.repeat || e.repeat === "none") {
-                                                return e.date === dayStr;
-                                            }
-
-                                            // 2. Daily: matches everything (conceptually)
-                                            // We might want to check start date but for now we show all
+                                            // 1. Daily: matches everything
                                             if (e.repeat === "daily") return true;
 
-                                            // 3. Weekly: matches same day of week
+                                            // 2. Weekly: matches same day of week
                                             if (e.repeat === "weekly") {
                                                 const entryDate = parse(e.date, "yyyy-MM-dd", new Date());
                                                 return day.getDay() === entryDate.getDay();
                                             }
 
-                                            return false;
+                                            // 3. Fallback for any legacy data (shouldn't exist if migrated)
+                                            return e.date === dayStr;
                                         });
 
                                         const isPast = isPastSlot(day, time);
@@ -293,7 +288,7 @@ export const UnifiedTimetable: React.FC = () => {
                                                         )}
                                                         {entries.map((entry) => {
                                                             // Calculate completion status for this specific day
-                                                            const isCompleted = entry.repeat && entry.repeat !== "none" ? entry.completedDates?.includes(dayStr) : entry.completed;
+                                                            const isCompleted = entry.repeat ? entry.completedDates?.includes(dayStr) : entry.completed;
 
                                                             return (
                                                                 <DraggableEntry
