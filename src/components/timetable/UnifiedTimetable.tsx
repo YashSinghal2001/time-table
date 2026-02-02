@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { useStore } from "../../store/useStore";
 import { TimetableEntry } from "../../types";
 import { ActivityForm } from "./ActivityForm";
@@ -16,7 +16,7 @@ const DraggableEntry = ({ entry, dayStr, onClick, onToggle, isCompleted }: { ent
 
     if (isDragging) {
         return (
-            <div ref={setNodeRef} className="opacity-30 text-[10px] p-1 rounded text-white truncate shadow-sm relative z-10 flex items-center justify-between gap-1" style={{ backgroundColor: entry.color, height: "100%" }}>
+            <div ref={setNodeRef} className="opacity-30 text-[10px] p-1 rounded text-white truncate shadow-sm relative z-10 flex items-center justify-between gap-1 h-full min-h-[32px]" style={{ backgroundColor: entry.color }}>
                 {entry.activity}
             </div>
         );
@@ -28,7 +28,7 @@ const DraggableEntry = ({ entry, dayStr, onClick, onToggle, isCompleted }: { ent
             {...listeners}
             {...attributes}
             onClick={onClick}
-            className={cn("text-[10px] p-1 rounded text-white truncate cursor-grab active:cursor-grabbing hover:opacity-90 shadow-sm relative z-10 flex items-center justify-between gap-1 group/task touch-none", isCompleted && "opacity-75")}
+            className={cn("text-[10px] p-1 rounded text-white truncate cursor-grab active:cursor-grabbing hover:opacity-90 shadow-sm relative z-10 flex items-center justify-between gap-1 group/task touch-none h-full min-h-[32px]", isCompleted && "opacity-75")}
             style={{ backgroundColor: entry.color }}
             title={`${entry.category}: ${entry.activity}`}
         >
@@ -45,7 +45,7 @@ const DroppableCell = ({ id, children, onClick, className }: { id: string; child
     const { setNodeRef, isOver } = useDroppable({ id });
 
     return (
-        <div ref={setNodeRef} className={cn(className, isOver && "bg-blue-50/50 dark:bg-blue-900/20 ring-2 ring-inset ring-blue-500/50 z-20")} onClick={onClick}>
+        <div ref={setNodeRef} className={cn(className, isOver && "bg-blue-50/50 dark:bg-blue-900/20 ring-2 ring-inset ring-blue-500/50 z-20", "h-full flex flex-col")} onClick={onClick}>
             {children}
         </div>
     );
@@ -67,7 +67,7 @@ export const UnifiedTimetable: React.FC = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedTime, setSelectedTime] = useState<string>("");
     const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
-    const [currentTime, setCurrentTime] = useState(new Date());
+    // const [currentTime, setCurrentTime] = useState(new Date());
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     const [activeDragEntry, setActiveDragEntry] = useState<TimetableEntry | null>(null);
@@ -125,32 +125,18 @@ export const UnifiedTimetable: React.FC = () => {
     };
 
     // Update current time every minute
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentTime(new Date());
-        }, 60000);
-        return () => clearInterval(timer);
-    }, []);
+    // useEffect(() => {
+    //     const timer = setInterval(() => {
+    //         setCurrentTime(new Date());
+    //     }, 60000);
+    //     return () => clearInterval(timer);
+    // }, []);
 
     const displayHours = useMemo(() => {
-        const currentHour = currentTime.getHours();
-        return [...HOURS].sort((a, b) => {
-            const hourA = parseInt(a.split(":")[0]);
-            const hourB = parseInt(b.split(":")[0]);
-
-            // If current hour is e.g. 14:00
-            // Hours >= 14 should come first
-            // Hours < 14 should come last
-
-            const isAPast = hourA < currentHour;
-            const isBPast = hourB < currentHour;
-
-            if (isAPast && !isBPast) return 1; // A is past, B is future -> A goes after
-            if (!isAPast && isBPast) return -1; // A is future, B is past -> A goes before
-
-            return hourA - hourB; // Both past or both future -> sort numerically
-        });
-    }, [currentTime]);
+        // Return hours in natural chronological order (morning to night)
+        // No sorting based on current time
+        return HOURS;
+    }, []);
 
     // Weekly View Data
     const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 }); // Monday
@@ -193,14 +179,10 @@ export const UnifiedTimetable: React.FC = () => {
         setSelectedDate(addDays(selectedDate, 7));
     };
 
-    const isPastSlot = (day: Date, timeSlot: string) => {
-        // Logic: Only hide if it's the current day AND before current hour
-        if (!isSameDay(day, currentTime)) return false;
-
-        const [slotHour] = timeSlot.split(":").map(Number);
-        const currentHour = currentTime.getHours();
-
-        return slotHour < currentHour;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const isPastSlot = (_day: Date, _timeSlot: string) => {
+        // Always show all time slots, never hide or disable interaction based on time
+        return false;
     };
 
     return (
@@ -243,9 +225,9 @@ export const UnifiedTimetable: React.FC = () => {
                         {/* Weekly Grid Body */}
                         <div className="flex-1 flex flex-col divide-y dark:divide-gray-700">
                             {displayHours.map((time) => (
-                                <div key={time} id={`time-slot-${time}`} className="grid grid-cols-8 min-h-[60px] flex-shrink-0">
+                                <div key={time} id={`time-slot-${time}`} className="grid grid-cols-8 flex-shrink-0 group/row items-stretch">
                                     {/* Time Column */}
-                                    <div className="p-2 text-xs text-right text-gray-500 border-r dark:border-gray-700 font-medium sticky left-0 bg-white dark:bg-gray-800">{format(parse(time, "HH:mm", new Date()), "h:mm a")}</div>
+                                    <div className="p-2 text-xs text-right text-gray-500 border-r dark:border-gray-700 font-medium sticky left-0 bg-white dark:bg-gray-800 flex items-center justify-end h-auto">{format(parse(time, "HH:mm", new Date()), "h:mm a")}</div>
 
                                     {/* Days Columns */}
                                     {weekDays.map((day) => {
@@ -274,11 +256,11 @@ export const UnifiedTimetable: React.FC = () => {
                                             <DroppableCell
                                                 key={dayStr}
                                                 id={`${time}|${dayStr}`}
-                                                className={cn("border-r dark:border-gray-700 last:border-r-0 p-1 relative group transition-colors", isPast ? "bg-white dark:bg-gray-800 pointer-events-none" : "hover:bg-gray-50 dark:hover:bg-gray-800/50")}
+                                                className={cn("border-r dark:border-gray-700 last:border-r-0 p-1 relative group transition-colors flex-1", isPast ? "bg-white dark:bg-gray-800 pointer-events-none" : "hover:bg-gray-50 dark:hover:bg-gray-800/50")}
                                                 onClick={() => !isPast && handleAdd(time, dayStr)}
                                             >
                                                 {!isPast && (
-                                                    <div className="flex flex-col gap-1 h-full relative">
+                                                    <div className="flex flex-col gap-1 h-full relative flex-1">
                                                         {entries.length === 0 && (
                                                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                                 <div className="bg-blue-500/10 dark:bg-blue-400/20 text-blue-600 dark:text-blue-400 p-1 rounded-full">
