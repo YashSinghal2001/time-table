@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { TimetableEntry } from '../types';
 import { TimeSlot } from '../components/timetable/TimeSlot';
@@ -20,8 +20,23 @@ export const Timetable: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
+  const [currentHour, setCurrentHour] = useState<string>('');
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const hour = now.getHours();
+      setCurrentHour(`${hour.toString().padStart(2, '0')}:00`);
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 10000); // Check every 10 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
+  const isToday = dateStr === format(new Date(), 'yyyy-MM-dd');
   const todayEntries = timetable.filter(entry => entry.date === dateStr);
 
   const handleAdd = (time: string) => {
