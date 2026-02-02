@@ -13,6 +13,14 @@ interface TimeSlotProps {
 }
 
 export const TimeSlot: React.FC<TimeSlotProps> = ({ time, entries, onAdd, onEdit, onDrop, isCurrent }) => {
+    const rowRef = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        if (isCurrent && rowRef.current) {
+            rowRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    }, [isCurrent]);
+
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
     };
@@ -24,7 +32,7 @@ export const TimeSlot: React.FC<TimeSlotProps> = ({ time, entries, onAdd, onEdit
     };
 
     return (
-        <div className={cn("flex border-b dark:border-gray-800 min-h-[80px] border-l-4 border-l-transparent transition-all duration-300 ease-in-out", isCurrent && "bg-blue-50 dark:bg-blue-900/20 border-l-blue-500 shadow-sm")} onDragOver={handleDragOver} onDrop={handleDrop}>
+        <div ref={rowRef} className={cn("flex border-b dark:border-gray-800 min-h-[80px] border-l-4 border-l-transparent transition-all duration-300 ease-in-out", isCurrent && "bg-blue-50 dark:bg-blue-900/20 border-l-blue-500 shadow-sm")} onDragOver={handleDragOver} onDrop={handleDrop}>
             <div className="w-16 md:w-20 p-2 text-right text-xs md:text-sm text-gray-500 border-r dark:border-gray-800 font-medium">{time}</div>
             <div className="flex-1 p-1 relative group">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-center justify-center">
