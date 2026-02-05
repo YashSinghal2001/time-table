@@ -1,6 +1,5 @@
 import React from 'react';
 import { DailyChart } from '../components/analytics/DailyChart';
-import { WeeklyTrend } from '../components/analytics/WeeklyTrend';
 import { TaskDistribution } from '../components/analytics/TaskDistribution';
 
 export const Analytics: React.FC = () => {
@@ -10,7 +9,6 @@ export const Analytics: React.FC = () => {
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <DailyChart />
-        <WeeklyTrend />
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
