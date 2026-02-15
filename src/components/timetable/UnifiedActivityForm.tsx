@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { TimetableEntry, Category } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
 import { X, Clock, AlertCircle } from 'lucide-react';
-import { format, parse, addHours } from 'date-fns';
+import { format, parse, addHours, startOfWeek, addDays } from 'date-fns';
 
 interface UnifiedActivityFormProps {
   timeSlot: string;
@@ -73,54 +73,91 @@ export const UnifiedActivityForm: React.FC<UnifiedActivityFormProps> = ({
         category,
         color: selectedCategory?.color || '#3B82F6',
         date,
-        repeat,
         completed: initialData.completed || false,
-        completedDates: initialData.completedDates || []
       };
       onSubmit(entry);
       return;
     }
 
-    // For new entries with duration > 1, create multiple entries
-    if (duration > 1) {
-      const entries: TimetableEntry[] = [];
-      const startHour = parseInt(timeSlot.split(':')[0]);
+    // For new entries, create separate entries based on repeat selection
+    const entries: TimetableEntry[] = [];
+    const selectedDate = parse(date, 'yyyy-MM-dd', new Date());
+    
+    if (repeat === 'daily') {
+      // Create 7 entries (one for each day of the week)
+      const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 }); // Monday
       
-      for (let i = 0; i < duration; i++) {
-        const hour = startHour + i;
-        if (hour > 22) break; // Don't go beyond 10 PM
+      for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+        const targetDate = addDays(weekStart, dayOffset);
+        const targetDateStr = format(targetDate, 'yyyy-MM-dd');
         
-        const slotTime = `${hour.toString().padStart(2, '0')}:00`;
+        // For each day, create entries based on duration
+        if (duration > 1) {
+          const startHour = parseInt(timeSlot.split(':')[0]);
+          
+          for (let i = 0; i < duration; i++) {
+            const hour = startHour + i;
+            if (hour > 22) break; // Don't go beyond 10 PM
+            
+            const slotTime = `${hour.toString().padStart(2, '0')}:00`;
+            
+            entries.push({
+              id: uuidv4(),
+              timeSlot: slotTime,
+              activity,
+              category,
+              color: selectedCategory?.color || '#3B82F6',
+              date: targetDateStr,
+              completed: false,
+            });
+          }
+        } else {
+          entries.push({
+            id: uuidv4(),
+            timeSlot,
+            activity,
+            category,
+            color: selectedCategory?.color || '#3B82F6',
+            date: targetDateStr,
+            completed: false,
+          });
+        }
+      }
+    } else {
+      // Weekly: create entry only for the selected day
+      if (duration > 1) {
+        const startHour = parseInt(timeSlot.split(':')[0]);
         
+        for (let i = 0; i < duration; i++) {
+          const hour = startHour + i;
+          if (hour > 22) break; // Don't go beyond 10 PM
+          
+          const slotTime = `${hour.toString().padStart(2, '0')}:00`;
+          
+          entries.push({
+            id: uuidv4(),
+            timeSlot: slotTime,
+            activity,
+            category,
+            color: selectedCategory?.color || '#3B82F6',
+            date,
+            completed: false,
+          });
+        }
+      } else {
         entries.push({
           id: uuidv4(),
-          timeSlot: slotTime,
+          timeSlot,
           activity,
           category,
           color: selectedCategory?.color || '#3B82F6',
           date,
-          repeat,
           completed: false,
-          completedDates: []
         });
       }
-      
-      onMultiSubmit(entries);
-    } else {
-      // Single entry
-      const entry: TimetableEntry = {
-        id: uuidv4(),
-        timeSlot,
-        activity,
-        category,
-        color: selectedCategory?.color || '#3B82F6',
-        date,
-        repeat,
-        completed: false,
-        completedDates: []
-      };
-      onSubmit(entry);
     }
+    
+    onMultiSubmit(entries);
   };
 
   return (

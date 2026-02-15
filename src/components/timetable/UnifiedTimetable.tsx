@@ -169,16 +169,9 @@ export const UnifiedTimetable: React.FC = () => {
             if (hour > 22) break; // Don't check beyond 10 PM
             
             const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+            // Check if there's an entry for this exact date and time slot
             const hasEntry = timetable.some(entry => {
-                if (entry.timeSlot !== timeSlot) return false;
-                
-                if (entry.repeat === 'daily') return true;
-                if (entry.repeat === 'weekly') {
-                    const entryDate = parse(entry.date, 'yyyy-MM-dd', new Date());
-                    const targetDate = parse(dayStr, 'yyyy-MM-dd', new Date());
-                    return targetDate.getDay() === entryDate.getDay();
-                }
-                return entry.date === dayStr;
+                return entry.timeSlot === timeSlot && entry.date === dayStr;
             });
             
             if (hasEntry) {
@@ -276,21 +269,9 @@ export const UnifiedTimetable: React.FC = () => {
                                     {weekDays.map((day) => {
                                         const dayStr = format(day, "yyyy-MM-dd");
 
-                                        // Modified filtering to include recurring tasks
+                                        // Filter entries by exact date and time slot
                                         const entries = timetable.filter((e) => {
-                                            if (e.timeSlot !== time) return false;
-
-                                            // 1. Daily: matches everything
-                                            if (e.repeat === "daily") return true;
-
-                                            // 2. Weekly: matches same day of week
-                                            if (e.repeat === "weekly") {
-                                                const entryDate = parse(e.date, "yyyy-MM-dd", new Date());
-                                                return day.getDay() === entryDate.getDay();
-                                            }
-
-                                            // 3. Fallback for any legacy data (shouldn't exist if migrated)
-                                            return e.date === dayStr;
+                                            return e.timeSlot === time && e.date === dayStr;
                                         });
 
                                         const isPast = isPastSlot(day, time);
@@ -312,7 +293,8 @@ export const UnifiedTimetable: React.FC = () => {
                                                             </div>
                                                         )}
                                                         {entries.map((entry) => {
-                                                            // Calculate completion status for this specific day
+                                                            // For new entries, use completed field directly
+                                                            // For legacy entries with repeat, use completedDates
                                                             const isCompleted = entry.repeat ? entry.completedDates?.includes(dayStr) : entry.completed;
 
                                                             return (
@@ -327,7 +309,8 @@ export const UnifiedTimetable: React.FC = () => {
                                                                     }}
                                                                     onToggle={(e) => {
                                                                         e.stopPropagation();
-                                                                        toggleTimetableEntryCompletion(entry.id, dayStr);
+                                                                        // For legacy entries with repeat, pass dayStr; otherwise pass undefined
+                                                                        toggleTimetableEntryCompletion(entry.id, entry.repeat ? dayStr : undefined);
                                                                     }}
                                                                 />
                                                             );

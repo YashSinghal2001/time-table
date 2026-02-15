@@ -21,9 +21,9 @@ export interface TimetableEntry {
     category: Category;
     color: string;
     date: string; // YYYY-MM-DD
-    completed?: boolean; // Legacy/Single instance status
-    repeat?: "daily" | "weekly";
-    completedDates?: string[]; // For recurring tasks
+    completed?: boolean;
+    repeat?: "daily" | "weekly"; // Deprecated: Only for backward compatibility with legacy data
+    completedDates?: string[]; // Deprecated: Only for backward compatibility with legacy data
 }
 
 export interface AppSettings {
