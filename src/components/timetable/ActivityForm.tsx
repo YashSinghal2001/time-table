@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { TimetableEntry, Category } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
-import { X } from 'lucide-react';
+import { X, Clock } from 'lucide-react';
+import { format, parse } from 'date-fns';
 
 interface ActivityFormProps {
   timeSlot: string;
@@ -10,6 +11,8 @@ interface ActivityFormProps {
   onDelete?: (id: string) => void;
   onClose: () => void;
   initialData?: TimetableEntry | null;
+  duration?: number;
+  onMultiSubmit?: (entries: TimetableEntry[]) => void;
 }
 
 const categories: { value: Category; label: string; color: string }[] = [
@@ -19,7 +22,16 @@ const categories: { value: Category; label: string; color: string }[] = [
   { value: 'personal', label: 'Personal', color: '#F59E0B' }, // Orange
 ];
 
-export const ActivityForm: React.FC<ActivityFormProps> = ({ timeSlot, date, onSubmit, onDelete, onClose, initialData }) => {
+export const ActivityForm: React.FC<ActivityFormProps> = ({ 
+  timeSlot, 
+  date, 
+  onSubmit, 
+  onDelete, 
+  onClose, 
+  initialData,
+  duration = 1,
+  onMultiSubmit
+}) => {
   const [activity, setActivity] = useState(initialData?.activity || '');
   const [category, setCategory] = useState<Category>(initialData?.category || 'work');
   const [repeat, setRepeat] = useState<'daily' | 'weekly'>(
@@ -31,19 +43,63 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ timeSlot, date, onSu
     
     const selectedCategory = categories.find(c => c.value === category);
     
-    const entry: TimetableEntry = {
-      id: initialData?.id || uuidv4(),
-      timeSlot,
-      activity,
-      category,
-      color: selectedCategory?.color || '#3B82F6',
-      date,
-      repeat,
-      completed: initialData?.completed || false,
-      completedDates: initialData?.completedDates || []
-    };
-    
-    onSubmit(entry);
+    // If editing existing entry, just update it
+    if (initialData) {
+      const entry: TimetableEntry = {
+        id: initialData.id,
+        timeSlot,
+        activity,
+        category,
+        color: selectedCategory?.color || '#3B82F6',
+        date,
+        repeat,
+        completed: initialData.completed || false,
+        completedDates: initialData.completedDates || []
+      };
+      onSubmit(entry);
+      return;
+    }
+
+    // For new entries with duration > 1, create multiple entries
+    if (duration > 1 && onMultiSubmit) {
+      const entries: TimetableEntry[] = [];
+      const startHour = parseInt(timeSlot.split(':')[0]);
+      
+      for (let i = 0; i < duration; i++) {
+        const hour = startHour + i;
+        if (hour > 22) break; // Don't go beyond 10 PM
+        
+        const slotTime = `${hour.toString().padStart(2, '0')}:00`;
+        
+        entries.push({
+          id: uuidv4(),
+          timeSlot: slotTime,
+          activity,
+          category,
+          color: selectedCategory?.color || '#3B82F6',
+          date,
+          repeat,
+          completed: false,
+          completedDates: []
+        });
+      }
+      
+      onMultiSubmit(entries);
+    } else {
+      // Single entry
+      const entry: TimetableEntry = {
+        id: uuidv4(),
+        timeSlot,
+        activity,
+        category,
+        color: selectedCategory?.color || '#3B82F6',
+        date,
+        repeat,
+        completed: false,
+        completedDates: []
+      };
+      onSubmit(entry);
+    }
   };
 
   return (
@@ -59,8 +115,20 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ timeSlot, date, onSu
         </div>
         
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-             Time: <span className="font-medium text-gray-900 dark:text-white">{timeSlot}</span>
+          <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+            <div>
+              Time: <span className="font-medium text-gray-900 dark:text-white">
+                {format(parse(timeSlot, 'HH:mm', new Date()), 'h:mm a')}
+              </span>
+            </div>
+            {!initialData && duration > 1 && (
+              <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                <Clock className="w-3 h-3" />
+                <span className="font-medium">
+                  {duration} hour{duration > 1 ? 's' : ''} duration
+                </span>
+              </div>
+            )}
           </div>
 
           <div>
@@ -89,27 +157,17 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ timeSlot, date, onSu
           
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
-            <div className="grid grid-cols-2 gap-2">
-                {categories.map((cat) => (
-                    <button
-                        key={cat.value}
-                        type="button"
-                        onClick={() => setCategory(cat.value)}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
-                            category === cat.value
-                                ? 'ring-2 ring-offset-1 dark:ring-offset-gray-800'
-                                : 'hover:bg-gray-50 dark:hover:bg-gray-700'
-                        }`}
-                        style={{ 
-                            backgroundColor: category === cat.value ? cat.color : undefined,
-                            borderColor: cat.color,
-                            color: category === cat.value ? 'white' : cat.color
-                        }}
-                    >
-                        {cat.label}
-                    </button>
-                ))}
-            </div>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value as Category)}
+              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              {categories.map((cat) => (
+                <option key={cat.value} value={cat.value}>
+                  {cat.label}
+                </option>
+              ))}
+            </select>
           </div>
           
           <div className="pt-4 flex justify-between gap-2">

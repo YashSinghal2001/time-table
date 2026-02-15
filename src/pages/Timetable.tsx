@@ -5,8 +5,8 @@ import { TimeSlot } from "../components/timetable/TimeSlot";
 import { ActivityForm } from "../components/timetable/ActivityForm";
 import { format } from "date-fns";
 
-const HOURS = Array.from({ length: 18 }, (_, i) => {
-    const hour = i + 6; // Start at 6:00
+const HOURS = Array.from({ length: 19 }, (_, i) => {
+    const hour = i + 4; // Start at 4:00 AM, end at 10:00 PM (4 + 18 = 22)
     return `${hour.toString().padStart(2, "0")}:00`;
 });
 

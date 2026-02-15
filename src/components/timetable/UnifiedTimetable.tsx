@@ -1,7 +1,7 @@
 import React, { useState, useRef, useMemo } from "react";
 import { useStore } from "../../store/useStore";
 import { TimetableEntry } from "../../types";
-import { ActivityForm } from "./ActivityForm";
+import { UnifiedActivityForm } from "./UnifiedActivityForm";
 import { format, addDays, subDays, startOfWeek, isSameDay, parse } from "date-fns";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, Check } from "lucide-react";
 import { cn } from "../../utils/cn";
@@ -51,8 +51,8 @@ const DroppableCell = ({ id, children, onClick, className }: { id: string; child
     );
 };
 
-const HOURS = Array.from({ length: 18 }, (_, i) => {
-    const hour = i + 6; // Start at 6:00
+const HOURS = Array.from({ length: 19 }, (_, i) => {
+    const hour = i + 4; // Start at 4:00 AM, end at 10:00 PM (4 + 18 = 22)
     return `${hour.toString().padStart(2, "0")}:00`;
 });
 
@@ -66,6 +66,7 @@ export const UnifiedTimetable: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedTime, setSelectedTime] = useState<string>("");
+    const [selectedDayStr, setSelectedDayStr] = useState<string>("");
     const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
     // const [currentTime, setCurrentTime] = useState(new Date());
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -144,11 +145,53 @@ export const UnifiedTimetable: React.FC = () => {
 
     const handleAdd = (time: string, date?: string) => {
         setSelectedTime(time);
+        const targetDate = date || dateStr;
+        setSelectedDayStr(targetDate);
         if (date && date !== dateStr) {
             setSelectedDate(new Date(date));
         }
         setEditingEntry(null);
         setIsFormOpen(true);
+    };
+
+    const calculateMaxHours = (startTime: string): number => {
+        const startHour = parseInt(startTime.split(':')[0]);
+        const endHour = 22; // 10 PM
+        return Math.max(1, endHour - startHour + 1);
+    };
+
+    const getConflictingSlots = (startTime: string, duration: number, dayStr: string): string[] => {
+        const startHour = parseInt(startTime.split(':')[0]);
+        const conflicts: string[] = [];
+        
+        for (let i = 0; i < duration; i++) {
+            const hour = startHour + i;
+            if (hour > 22) break; // Don't check beyond 10 PM
+            
+            const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+            const hasEntry = timetable.some(entry => {
+                if (entry.timeSlot !== timeSlot) return false;
+                
+                if (entry.repeat === 'daily') return true;
+                if (entry.repeat === 'weekly') {
+                    const entryDate = parse(entry.date, 'yyyy-MM-dd', new Date());
+                    const targetDate = parse(dayStr, 'yyyy-MM-dd', new Date());
+                    return targetDate.getDay() === entryDate.getDay();
+                }
+                return entry.date === dayStr;
+            });
+            
+            if (hasEntry) {
+                conflicts.push(format(parse(timeSlot, 'HH:mm', new Date()), 'h:mm a'));
+            }
+        }
+        
+        return conflicts;
+    };
+
+    const handleMultiSubmit = (entries: TimetableEntry[]) => {
+        entries.forEach(entry => addTimetableEntry(entry));
+        setIsFormOpen(false);
     };
 
     const handleEdit = (entry: TimetableEntry) => {
@@ -310,7 +353,19 @@ export const UnifiedTimetable: React.FC = () => {
                     </div>
                 </div>
 
-                {isFormOpen && <ActivityForm timeSlot={selectedTime} date={format(selectedDate, "yyyy-MM-dd")} initialData={editingEntry} onSubmit={handleSave} onDelete={handleDelete} onClose={() => setIsFormOpen(false)} />}
+                {isFormOpen && (
+                    <UnifiedActivityForm 
+                        timeSlot={selectedTime} 
+                        date={selectedDayStr || format(selectedDate, "yyyy-MM-dd")} 
+                        initialData={editingEntry} 
+                        onSubmit={handleSave} 
+                        onDelete={handleDelete} 
+                        onClose={() => setIsFormOpen(false)}
+                        onMultiSubmit={handleMultiSubmit}
+                        maxHours={calculateMaxHours(selectedTime)}
+                        getConflicts={(duration) => getConflictingSlots(selectedTime, duration, selectedDayStr)}
+                    />
+                )}
 
                 <DragOverlay>
                     {activeDragEntry ? (
