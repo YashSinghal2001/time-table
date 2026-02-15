@@ -20,17 +20,8 @@ interface AppState extends AppData {
 
 const initialData = loadData();
 
-// Ensure legacy tasks get migrated to weekly if they have no repeat status
-const migratedData = {
-    ...initialData,
-    timetable: initialData.timetable.map((t) => ({
-        ...t,
-        repeat: (t.repeat === "daily" ? "daily" : "weekly") as "daily" | "weekly",
-    })),
-};
-
 export const useStore = create<AppState>((set) => ({
-    ...migratedData,
+    ...initialData,
 
     addTask: (task) =>
         set((state) => {

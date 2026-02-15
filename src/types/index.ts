@@ -22,8 +22,13 @@ export interface TimetableEntry {
     color: string;
     date: string; // YYYY-MM-DD
     completed?: boolean;
-    repeat?: "daily" | "weekly"; // Deprecated: Only for backward compatibility with legacy data
-    completedDates?: string[]; // Deprecated: Only for backward compatibility with legacy data
+    
+    // DEPRECATED FIELDS - Only for backward compatibility with legacy data
+    // New entries should NOT include these fields
+    // The 'repeat' field is only used during creation to determine how many entries to create
+    // After creation, each day's task is independent with its own unique ID
+    repeat?: "daily" | "weekly";
+    completedDates?: string[];
 }
 
 export interface AppSettings {

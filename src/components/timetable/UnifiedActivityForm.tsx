@@ -36,9 +36,8 @@ export const UnifiedActivityForm: React.FC<UnifiedActivityFormProps> = ({
 }) => {
   const [activity, setActivity] = useState(initialData?.activity || '');
   const [category, setCategory] = useState<Category>(initialData?.category || 'work');
-  const [repeat, setRepeat] = useState<'daily' | 'weekly'>(
-    (initialData?.repeat === 'daily' || initialData?.repeat === 'weekly') ? initialData.repeat : 'daily'
-  );
+  // Only use repeat for new entries, not when editing
+  const [repeat, setRepeat] = useState<'daily' | 'weekly'>('daily');
   const [duration, setDuration] = useState(1);
 
   // Calculate time range based on duration
@@ -97,7 +96,7 @@ export const UnifiedActivityForm: React.FC<UnifiedActivityFormProps> = ({
           
           for (let i = 0; i < duration; i++) {
             const hour = startHour + i;
-            if (hour > 22) break; // Don't go beyond 10 PM
+            if (hour > 21) break; // Don't go beyond 9 PM
             
             const slotTime = `${hour.toString().padStart(2, '0')}:00`;
             
@@ -130,7 +129,7 @@ export const UnifiedActivityForm: React.FC<UnifiedActivityFormProps> = ({
         
         for (let i = 0; i < duration; i++) {
           const hour = startHour + i;
-          if (hour > 22) break; // Don't go beyond 10 PM
+          if (hour > 21) break; // Don't go beyond 9 PM
           
           const slotTime = `${hour.toString().padStart(2, '0')}:00`;
           
@@ -220,7 +219,7 @@ export const UnifiedActivityForm: React.FC<UnifiedActivityFormProps> = ({
               {maxHours < 8 && (
                 <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
-                  Only {maxHours} hour{maxHours > 1 ? 's' : ''} available until 10 PM
+                  Only {maxHours} hour{maxHours > 1 ? 's' : ''} available until 9 PM
                 </p>
               )}
 
@@ -260,20 +259,25 @@ export const UnifiedActivityForm: React.FC<UnifiedActivityFormProps> = ({
             />
           </div>
           
-          {/* Repeat Dropdown */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Repeat
-            </label>
-            <select
-              value={repeat}
-              onChange={(e) => setRepeat(e.target.value as 'daily' | 'weekly')}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-            </select>
-          </div>
+          {/* Repeat Dropdown - Only show when creating new entries */}
+          {!initialData && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Repeat
+              </label>
+              <select
+                value={repeat}
+                onChange={(e) => setRepeat(e.target.value as 'daily' | 'weekly')}
+                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Daily creates 7 separate tasks (one per day). Each can be edited or deleted independently.
+              </p>
+            </div>
+          )}
           
           {/* Category Dropdown */}
           <div>

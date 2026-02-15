@@ -51,8 +51,8 @@ const DroppableCell = ({ id, children, onClick, className }: { id: string; child
     );
 };
 
-const HOURS = Array.from({ length: 19 }, (_, i) => {
-    const hour = i + 4; // Start at 4:00 AM, end at 10:00 PM (4 + 18 = 22)
+const HOURS = Array.from({ length: 18 }, (_, i) => {
+    const hour = i + 4; // Start at 4:00 AM, end at 9:00 PM (4 + 17 = 21)
     return `${hour.toString().padStart(2, "0")}:00`;
 });
 
@@ -156,7 +156,7 @@ export const UnifiedTimetable: React.FC = () => {
 
     const calculateMaxHours = (startTime: string): number => {
         const startHour = parseInt(startTime.split(':')[0]);
-        const endHour = 22; // 10 PM
+        const endHour = 21; // 9 PM
         return Math.max(1, endHour - startHour + 1);
     };
 
@@ -166,7 +166,7 @@ export const UnifiedTimetable: React.FC = () => {
         
         for (let i = 0; i < duration; i++) {
             const hour = startHour + i;
-            if (hour > 22) break; // Don't check beyond 10 PM
+            if (hour > 21) break; // Don't check beyond 9 PM
             
             const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
             // Check if there's an entry for this exact date and time slot

@@ -34,16 +34,15 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
 }) => {
   const [activity, setActivity] = useState(initialData?.activity || '');
   const [category, setCategory] = useState<Category>(initialData?.category || 'work');
-  const [repeat, setRepeat] = useState<'daily' | 'weekly'>(
-    (initialData?.repeat === 'daily' || initialData?.repeat === 'weekly') ? initialData.repeat : 'weekly'
-  );
+  // Only use repeat for new entries, not when editing
+  const [repeat, setRepeat] = useState<'daily' | 'weekly'>('weekly');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     const selectedCategory = categories.find(c => c.value === category);
     
-    // If editing existing entry, just update it
+    // If editing existing entry, just update it (no repeat field)
     if (initialData) {
       const entry: TimetableEntry = {
         id: initialData.id,
@@ -52,9 +51,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
         category,
         color: selectedCategory?.color || '#3B82F6',
         date,
-        repeat,
         completed: initialData.completed || false,
-        completedDates: initialData.completedDates || []
       };
       onSubmit(entry);
       return;
@@ -67,7 +64,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
       
       for (let i = 0; i < duration; i++) {
         const hour = startHour + i;
-        if (hour > 22) break; // Don't go beyond 10 PM
+        if (hour > 21) break; // Don't go beyond 9 PM
         
         const slotTime = `${hour.toString().padStart(2, '0')}:00`;
         
@@ -78,9 +75,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
           category,
           color: selectedCategory?.color || '#3B82F6',
           date,
-          repeat,
           completed: false,
-          completedDates: []
         });
       }
       
@@ -94,9 +89,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
         category,
         color: selectedCategory?.color || '#3B82F6',
         date,
-        repeat,
         completed: false,
-        completedDates: []
       };
       onSubmit(entry);
     }
@@ -143,17 +136,23 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
             />
           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Repeat</label>
-            <select
-              value={repeat}
-              onChange={(e) => setRepeat(e.target.value as any)}
-              className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="weekly">Weekly</option>
-              <option value="daily">Daily</option>
-            </select>
-          </div>
+          {/* Repeat Dropdown - Only show when creating new entries */}
+          {!initialData && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Repeat</label>
+              <select
+                value={repeat}
+                onChange={(e) => setRepeat(e.target.value as any)}
+                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="weekly">Weekly</option>
+                <option value="daily">Daily</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Daily creates 7 separate tasks (one per day). Each can be edited or deleted independently.
+              </p>
+            </div>
+          )}
           
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
