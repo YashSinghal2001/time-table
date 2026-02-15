@@ -16,24 +16,17 @@ export interface Task {
 
 export interface TimetableEntry {
     id: string;
-    timeSlot: string; // "09:00"
+    timeSlot: string; // "09:00" format (HH:mm)
     activity: string;
     category: Category;
     color: string;
-    date: string; // YYYY-MM-DD
+    date: string; // YYYY-MM-DD format
     completed?: boolean;
-    
-    // DEPRECATED FIELDS - Only for backward compatibility with legacy data
-    // New entries should NOT include these fields
-    // The 'repeat' field is only used during creation to determine how many entries to create
-    // After creation, each day's task is independent with its own unique ID
-    repeat?: "daily" | "weekly";
-    completedDates?: string[];
 }
 
 export interface AppSettings {
-  theme: Theme;
-  notifications: boolean;
+    theme: Theme;
+    notifications: boolean;
 }
 
 export interface AppData {
@@ -42,5 +35,3 @@ export interface AppData {
   settings: AppSettings;
   notes: string;
 }
-
-export interface AppState extends AppData {}

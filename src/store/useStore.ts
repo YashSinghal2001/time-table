@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { AppData, Task, TimetableEntry, AppSettings, Priority, Category, TaskStatus } from "../types";
+import { AppData, Task, TimetableEntry, AppSettings, TaskStatus } from "../types";
 import { loadData, saveTasks, saveTimetable, saveSettings, saveNotes } from "../utils/localStorage";
 
 interface AppState extends AppData {
@@ -11,7 +11,7 @@ interface AppState extends AppData {
     addTimetableEntry: (entry: TimetableEntry) => void;
     updateTimetableEntry: (id: string, updates: Partial<TimetableEntry>) => void;
     deleteTimetableEntry: (id: string) => void;
-    toggleTimetableEntryCompletion: (id: string, date?: string) => void;
+    toggleTimetableEntryCompletion: (id: string) => void;
 
     updateSettings: (updates: Partial<AppSettings>) => void;
 
@@ -83,20 +83,11 @@ export const useStore = create<AppState>((set) => ({
             return { timetable: newTimetable };
         }),
 
-    toggleTimetableEntryCompletion: (id: string, date?: string) =>
+    toggleTimetableEntryCompletion: (id: string) =>
         set((state) => {
             const newTimetable = state.timetable.map((t) => {
                 if (t.id === id) {
-                    // Handle recurring tasks if date is provided and repeat is set
-                    if (t.repeat && date) {
-                        const completedDates = t.completedDates || [];
-                        const isCompleted = completedDates.includes(date);
-                        return {
-                            ...t,
-                            completedDates: isCompleted ? completedDates.filter((d) => d !== date) : [...completedDates, date],
-                        };
-                    }
-                    // Handle single tasks or fallback
+                    // All entries are independent with their own completion status
                     return { ...t, completed: !t.completed };
                 }
                 return t;

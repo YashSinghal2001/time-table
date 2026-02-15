@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import { useStore } from "../../store/useStore";
 import { TimetableEntry } from "../../types";
 import { UnifiedActivityForm } from "./UnifiedActivityForm";
@@ -68,10 +68,24 @@ export const UnifiedTimetable: React.FC = () => {
     const [selectedTime, setSelectedTime] = useState<string>("");
     const [selectedDayStr, setSelectedDayStr] = useState<string>("");
     const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
-    // const [currentTime, setCurrentTime] = useState(new Date());
+    const [currentTime, setCurrentTime] = useState(new Date());
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     const [activeDragEntry, setActiveDragEntry] = useState<TimetableEntry | null>(null);
+
+    // Update current time every minute for highlighting current hour
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 60000); // Update every minute
+        return () => clearInterval(timer);
+    }, []);
+
+    // Get current hour in HH:mm format
+    const currentHourSlot = useMemo(() => {
+        const hour = currentTime.getHours();
+        return `${hour.toString().padStart(2, "0")}:00`;
+    }, [currentTime]);
 
     const sensors = useSensors(
         useSensor(MouseSensor, {
@@ -125,17 +139,8 @@ export const UnifiedTimetable: React.FC = () => {
         }
     };
 
-    // Update current time every minute
-    // useEffect(() => {
-    //     const timer = setInterval(() => {
-    //         setCurrentTime(new Date());
-    //     }, 60000);
-    //     return () => clearInterval(timer);
-    // }, []);
-
     const displayHours = useMemo(() => {
         // Return hours in natural chronological order (morning to night)
-        // No sorting based on current time
         return HOURS;
     }, []);
 
@@ -155,35 +160,35 @@ export const UnifiedTimetable: React.FC = () => {
     };
 
     const calculateMaxHours = (startTime: string): number => {
-        const startHour = parseInt(startTime.split(':')[0]);
+        const startHour = parseInt(startTime.split(":")[0]);
         const endHour = 21; // 9 PM
         return Math.max(1, endHour - startHour + 1);
     };
 
     const getConflictingSlots = (startTime: string, duration: number, dayStr: string): string[] => {
-        const startHour = parseInt(startTime.split(':')[0]);
+        const startHour = parseInt(startTime.split(":")[0]);
         const conflicts: string[] = [];
-        
+
         for (let i = 0; i < duration; i++) {
             const hour = startHour + i;
             if (hour > 21) break; // Don't check beyond 9 PM
-            
-            const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+
+            const timeSlot = `${hour.toString().padStart(2, "0")}:00`;
             // Check if there's an entry for this exact date and time slot
-            const hasEntry = timetable.some(entry => {
+            const hasEntry = timetable.some((entry) => {
                 return entry.timeSlot === timeSlot && entry.date === dayStr;
             });
-            
+
             if (hasEntry) {
-                conflicts.push(format(parse(timeSlot, 'HH:mm', new Date()), 'h:mm a'));
+                conflicts.push(format(parse(timeSlot, "HH:mm", new Date()), "h:mm a"));
             }
         }
-        
+
         return conflicts;
     };
 
     const handleMultiSubmit = (entries: TimetableEntry[]) => {
-        entries.forEach(entry => addTimetableEntry(entry));
+        entries.forEach((entry) => addTimetableEntry(entry));
         setIsFormOpen(false);
     };
 
@@ -215,10 +220,9 @@ export const UnifiedTimetable: React.FC = () => {
         setSelectedDate(addDays(selectedDate, 7));
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const isPastSlot = (_day: Date, _timeSlot: string) => {
-        // Always show all time slots, never hide or disable interaction based on time
-        return false;
+    // Check if a time slot is the current hour on today
+    const isCurrentHour = (day: Date, timeSlot: string) => {
+        return isSameDay(day, currentTime) && timeSlot === currentHourSlot;
     };
 
     return (
@@ -260,30 +264,43 @@ export const UnifiedTimetable: React.FC = () => {
 
                         {/* Weekly Grid Body */}
                         <div className="flex-1 flex flex-col divide-y dark:divide-gray-700">
-                            {displayHours.map((time) => (
-                                <div key={time} id={`time-slot-${time}`} className="grid grid-cols-8 flex-shrink-0 group/row items-stretch">
-                                    {/* Time Column */}
-                                    <div className="p-2 text-xs text-right text-gray-500 border-r dark:border-gray-700 font-medium sticky left-0 bg-white dark:bg-gray-800 flex items-center justify-end h-auto">{format(parse(time, "HH:mm", new Date()), "h:mm a")}</div>
+                            {displayHours.map((time) => {
+                                // Check if this is the current hour row
+                                const isCurrentRow = weekDays.some((day) => isCurrentHour(day, time));
 
-                                    {/* Days Columns */}
-                                    {weekDays.map((day) => {
-                                        const dayStr = format(day, "yyyy-MM-dd");
+                                return (
+                                    <div key={time} id={`time-slot-${time}`} className={cn("grid grid-cols-8 flex-shrink-0 group/row items-stretch transition-colors", isCurrentRow && "bg-blue-50/30 dark:bg-blue-900/10")}>
+                                        {/* Time Column */}
+                                        <div
+                                            className={cn(
+                                                "p-2 text-xs text-right border-r dark:border-gray-700 font-medium sticky left-0 flex items-center justify-end h-auto",
+                                                isCurrentRow ? "text-blue-600 dark:text-blue-400 font-bold bg-blue-50/50 dark:bg-blue-900/20" : "text-gray-500 bg-white dark:bg-gray-800",
+                                            )}
+                                        >
+                                            {format(parse(time, "HH:mm", new Date()), "h:mm a")}
+                                        </div>
 
-                                        // Filter entries by exact date and time slot
-                                        const entries = timetable.filter((e) => {
-                                            return e.timeSlot === time && e.date === dayStr;
-                                        });
+                                        {/* Days Columns */}
+                                        {weekDays.map((day) => {
+                                            const dayStr = format(day, "yyyy-MM-dd");
+                                            const isCurrent = isCurrentHour(day, time);
 
-                                        const isPast = isPastSlot(day, time);
+                                            // Filter entries by exact date and time slot
+                                            const entries = timetable.filter((e) => {
+                                                return e.timeSlot === time && e.date === dayStr;
+                                            });
 
-                                        return (
-                                            <DroppableCell
-                                                key={dayStr}
-                                                id={`${time}|${dayStr}`}
-                                                className={cn("border-r dark:border-gray-700 last:border-r-0 p-1 relative group transition-colors flex-1", isPast ? "bg-white dark:bg-gray-800 pointer-events-none" : "hover:bg-gray-50 dark:hover:bg-gray-800/50")}
-                                                onClick={() => !isPast && handleAdd(time, dayStr)}
-                                            >
-                                                {!isPast && (
+                                            return (
+                                                <DroppableCell
+                                                    key={dayStr}
+                                                    id={`${time}|${dayStr}`}
+                                                    className={cn(
+                                                        "border-r dark:border-gray-700 last:border-r-0 p-1 relative group transition-colors flex-1",
+                                                        isCurrent && "bg-blue-50/50 dark:bg-blue-900/20 ring-1 ring-inset ring-blue-200 dark:ring-blue-800",
+                                                        !isCurrent && "hover:bg-gray-50 dark:hover:bg-gray-800/50",
+                                                    )}
+                                                    onClick={() => handleAdd(time, dayStr)}
+                                                >
                                                     <div className="flex flex-col gap-1 h-full relative flex-1">
                                                         {entries.length === 0 && (
                                                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -293,9 +310,8 @@ export const UnifiedTimetable: React.FC = () => {
                                                             </div>
                                                         )}
                                                         {entries.map((entry) => {
-                                                            // For new entries, use completed field directly
-                                                            // For legacy entries with repeat, use completedDates
-                                                            const isCompleted = entry.repeat ? entry.completedDates?.includes(dayStr) : entry.completed;
+                                                            // All entries now use the completed field directly (no legacy logic)
+                                                            const isCompleted = entry.completed;
 
                                                             return (
                                                                 <DraggableEntry
@@ -309,19 +325,19 @@ export const UnifiedTimetable: React.FC = () => {
                                                                     }}
                                                                     onToggle={(e) => {
                                                                         e.stopPropagation();
-                                                                        // For legacy entries with repeat, pass dayStr; otherwise pass undefined
-                                                                        toggleTimetableEntryCompletion(entry.id, entry.repeat ? dayStr : undefined);
+                                                                        // All entries are independent, no date parameter needed
+                                                                        toggleTimetableEntryCompletion(entry.id);
                                                                     }}
                                                                 />
                                                             );
                                                         })}
                                                     </div>
-                                                )}
-                                            </DroppableCell>
-                                        );
-                                    })}
-                                </div>
-                            ))}
+                                                </DroppableCell>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })}
 
                             {/* Filler Area to extend grid lines to bottom */}
                             <div className="flex-1 grid grid-cols-8 min-h-0 bg-white dark:bg-gray-800">
@@ -337,12 +353,12 @@ export const UnifiedTimetable: React.FC = () => {
                 </div>
 
                 {isFormOpen && (
-                    <UnifiedActivityForm 
-                        timeSlot={selectedTime} 
-                        date={selectedDayStr || format(selectedDate, "yyyy-MM-dd")} 
-                        initialData={editingEntry} 
-                        onSubmit={handleSave} 
-                        onDelete={handleDelete} 
+                    <UnifiedActivityForm
+                        timeSlot={selectedTime}
+                        date={selectedDayStr || format(selectedDate, "yyyy-MM-dd")}
+                        initialData={editingEntry}
+                        onSubmit={handleSave}
+                        onDelete={handleDelete}
                         onClose={() => setIsFormOpen(false)}
                         onMultiSubmit={handleMultiSubmit}
                         maxHours={calculateMaxHours(selectedTime)}

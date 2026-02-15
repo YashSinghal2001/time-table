@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { TimetableEntry, Category } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
 import { X, Clock, AlertCircle } from 'lucide-react';
-import { format, parse, addHours, startOfWeek, addDays } from 'date-fns';
+import { format, parse, addHours, startOfWeek, addDays, getDay } from 'date-fns';
 
 interface UnifiedActivityFormProps {
   timeSlot: string;
@@ -23,6 +23,16 @@ const categories: { value: Category; label: string; color: string }[] = [
   { value: 'personal', label: 'Personal', color: '#F59E0B' },
 ];
 
+const DAYS_OF_WEEK = [
+  { value: 1, label: 'Monday' },
+  { value: 2, label: 'Tuesday' },
+  { value: 3, label: 'Wednesday' },
+  { value: 4, label: 'Thursday' },
+  { value: 5, label: 'Friday' },
+  { value: 6, label: 'Saturday' },
+  { value: 0, label: 'Sunday' },
+];
+
 export const UnifiedActivityForm: React.FC<UnifiedActivityFormProps> = ({ 
   timeSlot, 
   date, 
@@ -39,6 +49,9 @@ export const UnifiedActivityForm: React.FC<UnifiedActivityFormProps> = ({
   // Only use repeat for new entries, not when editing
   const [repeat, setRepeat] = useState<'daily' | 'weekly'>('daily');
   const [duration, setDuration] = useState(1);
+  // For weekly repeat, store the selected day of week (0 = Sunday, 1 = Monday, etc.)
+  const selectedDate = parse(date, 'yyyy-MM-dd', new Date());
+  const [selectedWeekDay, setSelectedWeekDay] = useState<number>(getDay(selectedDate));
 
   // Calculate time range based on duration
   const timeRange = useMemo(() => {
@@ -50,13 +63,19 @@ export const UnifiedActivityForm: React.FC<UnifiedActivityFormProps> = ({
     };
   }, [timeSlot, duration]);
 
-  // Get conflicts for current duration
+  // Get conflicts for current duration - returns array of time strings like "4:00 AM"
   const conflictingSlots = useMemo(() => {
     if (initialData) return []; // No conflict check when editing
     return getConflicts(duration);
   }, [duration, getConflicts, initialData]);
 
   const hasConflicts = conflictingSlots.length > 0;
+
+  // Helper function to check if a specific time slot is conflicting
+  const isSlotConflicting = (slotTime: string): boolean => {
+    const formattedTime = format(parse(slotTime, 'HH:mm', new Date()), 'h:mm a');
+    return conflictingSlots.includes(formattedTime);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,7 +99,6 @@ export const UnifiedActivityForm: React.FC<UnifiedActivityFormProps> = ({
 
     // For new entries, create separate entries based on repeat selection
     const entries: TimetableEntry[] = [];
-    const selectedDate = parse(date, 'yyyy-MM-dd', new Date());
     
     if (repeat === 'daily') {
       // Create 7 entries (one for each day of the week)
@@ -90,7 +108,7 @@ export const UnifiedActivityForm: React.FC<UnifiedActivityFormProps> = ({
         const targetDate = addDays(weekStart, dayOffset);
         const targetDateStr = format(targetDate, 'yyyy-MM-dd');
         
-        // For each day, create entries based on duration
+        // For each day, create entries based on duration, skipping conflicts
         if (duration > 1) {
           const startHour = parseInt(timeSlot.split(':')[0]);
           
@@ -99,6 +117,11 @@ export const UnifiedActivityForm: React.FC<UnifiedActivityFormProps> = ({
             if (hour > 21) break; // Don't go beyond 9 PM
             
             const slotTime = `${hour.toString().padStart(2, '0')}:00`;
+            
+            // Skip if this slot is conflicting (only check for current day being edited)
+            if (targetDateStr === date && isSlotConflicting(slotTime)) {
+              continue;
+            }
             
             entries.push({
               id: uuidv4(),
@@ -111,6 +134,63 @@ export const UnifiedActivityForm: React.FC<UnifiedActivityFormProps> = ({
             });
           }
         } else {
+          // Single hour entry - skip if conflicting
+          if (!(targetDateStr === date && isSlotConflicting(timeSlot))) {
+            entries.push({
+              id: uuidv4(),
+              timeSlot,
+              activity,
+              category,
+              color: selectedCategory?.color || '#3B82F6',
+              date: targetDateStr,
+              completed: false,
+            });
+          }
+        }
+      }
+    } else {
+      // Weekly: create entry only for the selected day of week
+      const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 }); // Monday
+      
+      // Find the target date for the selected day of week
+      let targetDate = selectedDate;
+      for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+        const checkDate = addDays(weekStart, dayOffset);
+        if (getDay(checkDate) === selectedWeekDay) {
+          targetDate = checkDate;
+          break;
+        }
+      }
+      
+      const targetDateStr = format(targetDate, 'yyyy-MM-dd');
+      
+      if (duration > 1) {
+        const startHour = parseInt(timeSlot.split(':')[0]);
+        
+        for (let i = 0; i < duration; i++) {
+          const hour = startHour + i;
+          if (hour > 21) break; // Don't go beyond 9 PM
+          
+          const slotTime = `${hour.toString().padStart(2, '0')}:00`;
+          
+          // Skip if this slot is conflicting
+          if (targetDateStr === date && isSlotConflicting(slotTime)) {
+            continue;
+          }
+          
+          entries.push({
+            id: uuidv4(),
+            timeSlot: slotTime,
+            activity,
+            category,
+            color: selectedCategory?.color || '#3B82F6',
+            date: targetDateStr,
+            completed: false,
+          });
+        }
+      } else {
+        // Single hour entry - skip if conflicting
+        if (!(targetDateStr === date && isSlotConflicting(timeSlot))) {
           entries.push({
             id: uuidv4(),
             timeSlot,
@@ -121,38 +201,6 @@ export const UnifiedActivityForm: React.FC<UnifiedActivityFormProps> = ({
             completed: false,
           });
         }
-      }
-    } else {
-      // Weekly: create entry only for the selected day
-      if (duration > 1) {
-        const startHour = parseInt(timeSlot.split(':')[0]);
-        
-        for (let i = 0; i < duration; i++) {
-          const hour = startHour + i;
-          if (hour > 21) break; // Don't go beyond 9 PM
-          
-          const slotTime = `${hour.toString().padStart(2, '0')}:00`;
-          
-          entries.push({
-            id: uuidv4(),
-            timeSlot: slotTime,
-            activity,
-            category,
-            color: selectedCategory?.color || '#3B82F6',
-            date,
-            completed: false,
-          });
-        }
-      } else {
-        entries.push({
-          id: uuidv4(),
-          timeSlot,
-          activity,
-          category,
-          color: selectedCategory?.color || '#3B82F6',
-          date,
-          completed: false,
-        });
       }
     }
     
@@ -234,7 +282,7 @@ export const UnifiedActivityForm: React.FC<UnifiedActivityFormProps> = ({
                         The following time slots already have tasks: {conflictingSlots.join(', ')}
                       </p>
                       <p className="mt-1 text-amber-600 dark:text-amber-400">
-                        Proceeding will skip occupied slots.
+                        Conflicting slots will be automatically skipped.
                       </p>
                     </div>
                   </div>
@@ -261,22 +309,49 @@ export const UnifiedActivityForm: React.FC<UnifiedActivityFormProps> = ({
           
           {/* Repeat Dropdown - Only show when creating new entries */}
           {!initialData && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Repeat
-              </label>
-              <select
-                value={repeat}
-                onChange={(e) => setRepeat(e.target.value as 'daily' | 'weekly')}
-                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-              </select>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Daily creates 7 separate tasks (one per day). Each can be edited or deleted independently.
-              </p>
-            </div>
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Repeat
+                </label>
+                <select
+                  value={repeat}
+                  onChange={(e) => setRepeat(e.target.value as 'daily' | 'weekly')}
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                </select>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {repeat === 'daily' 
+                    ? 'Creates 7 separate tasks (one per day). Each can be edited or deleted independently.'
+                    : 'Creates a task for the selected day of the week only.'}
+                </p>
+              </div>
+
+              {/* Day of Week Selector - Only show for weekly repeat */}
+              {repeat === 'weekly' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Day of Week
+                  </label>
+                  <select
+                    value={selectedWeekDay}
+                    onChange={(e) => setSelectedWeekDay(parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    {DAYS_OF_WEEK.map((day) => (
+                      <option key={day.value} value={day.value}>
+                        {day.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Task will be created for {DAYS_OF_WEEK.find(d => d.value === selectedWeekDay)?.label} only.
+                  </p>
+                </div>
+              )}
+            </>
           )}
           
           {/* Category Dropdown */}
