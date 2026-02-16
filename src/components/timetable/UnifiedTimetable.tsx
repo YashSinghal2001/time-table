@@ -146,7 +146,14 @@ export const UnifiedTimetable: React.FC = () => {
 
     // Weekly View Data
     const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 }); // Monday
+    const weekStartStr = format(weekStart, 'yyyy-MM-dd');
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+    
+    const initializeWeek = useStore(state => state.initializeWeek);
+
+    useEffect(() => {
+        initializeWeek(weekStartStr);
+    }, [weekStartStr, initializeWeek]);
 
     const handleAdd = (time: string, date?: string) => {
         setSelectedTime(time);
@@ -188,7 +195,7 @@ export const UnifiedTimetable: React.FC = () => {
     };
 
     const handleMultiSubmit = (entries: TimetableEntry[]) => {
-        entries.forEach((entry) => addTimetableEntry(entry));
+        entries.forEach((entry) => addTimetableEntry({ ...entry, weekId: weekStartStr }));
         setIsFormOpen(false);
     };
 
@@ -202,7 +209,7 @@ export const UnifiedTimetable: React.FC = () => {
         if (editingEntry) {
             updateTimetableEntry(entry.id, entry);
         } else {
-            addTimetableEntry(entry);
+            addTimetableEntry({ ...entry, weekId: weekStartStr });
         }
         setIsFormOpen(false);
     };

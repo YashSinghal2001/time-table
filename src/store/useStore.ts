@@ -1,6 +1,8 @@
 import { create } from "zustand";
-import { AppData, Task, TimetableEntry, AppSettings, TaskStatus } from "../types";
-import { loadData, saveTasks, saveTimetable, saveSettings, saveNotes } from "../utils/localStorage";
+import { AppData, Task, TimetableEntry, AppSettings, TaskStatus, Category } from "../types";
+import { loadData, saveTasks, saveTimetable, saveSettings, saveNotes, saveInitializedWeeks } from "../utils/localStorage";
+import { format, parseISO, startOfWeek, addDays, differenceInCalendarDays } from "date-fns";
+import { v4 as uuidv4 } from "uuid";
 
 interface AppState extends AppData {
     addTask: (task: Task) => void;
@@ -13,6 +15,8 @@ interface AppState extends AppData {
     deleteTimetableEntry: (id: string) => void;
     toggleTimetableEntryCompletion: (id: string) => void;
 
+    initializeWeek: (weekStartDate: string) => void;
+
     updateSettings: (updates: Partial<AppSettings>) => void;
 
     setNotes: (notes: string) => void;
@@ -20,7 +24,7 @@ interface AppState extends AppData {
 
 const initialData = loadData();
 
-export const useStore = create<AppState>((set) => ({
+export const useStore = create<AppState>((set, get) => ({
     ...initialData,
 
     addTask: (task) =>
@@ -95,6 +99,109 @@ export const useStore = create<AppState>((set) => ({
             saveTimetable(newTimetable);
             return { timetable: newTimetable };
         }),
+
+    initializeWeek: (weekStartDate: string) => {
+        const state = get();
+        // If already initialized, do nothing
+        if (state.initializedWeeks.includes(weekStartDate)) {
+            return;
+        }
+
+        // Check if there are already entries for this week (safety check)
+        const hasEntries = state.timetable.some((t) => {
+            const entryWeekStart = format(startOfWeek(parseISO(t.date), { weekStartsOn: 1 }), "yyyy-MM-dd");
+            return entryWeekStart === weekStartDate;
+        });
+
+        if (hasEntries) {
+            // Mark as initialized and return
+            const newInitializedWeeks = [...state.initializedWeeks, weekStartDate];
+            saveInitializedWeeks(newInitializedWeeks);
+            set({ initializedWeeks: newInitializedWeeks });
+            return;
+        }
+
+        // Find the most recent previous week with data
+        // 1. Group existing entries by week
+        const weeksWithData = new Set<string>();
+        state.timetable.forEach((t) => {
+            const weekStart = format(startOfWeek(parseISO(t.date), { weekStartsOn: 1 }), "yyyy-MM-dd");
+            weeksWithData.add(weekStart);
+        });
+
+        // 2. Sort weeks descending and find first one before current week
+        const sortedWeeks = Array.from(weeksWithData).sort().reverse();
+        const previousWeek = sortedWeeks.find((w) => w < weekStartDate);
+
+        let newEntries: TimetableEntry[] = [];
+
+        if (previousWeek) {
+            // Copy from previous week
+            const previousEntries = state.timetable.filter((t) => {
+                const weekStart = format(startOfWeek(parseISO(t.date), { weekStartsOn: 1 }), "yyyy-MM-dd");
+                return weekStart === previousWeek;
+            });
+
+            newEntries = previousEntries.map((entry) => {
+                const oldDate = parseISO(entry.date);
+                const oldWeekStart = parseISO(previousWeek);
+                const dayOffset = differenceInCalendarDays(oldDate, oldWeekStart);
+                const newDate = addDays(parseISO(weekStartDate), dayOffset);
+
+                return {
+                    ...entry,
+                    id: uuidv4(),
+                    date: format(newDate, "yyyy-MM-dd"),
+                    weekId: weekStartDate,
+                    completed: false, // Reset completion status
+                };
+            });
+        } else {
+            // Use default template if no history exists
+            // Create a basic M-F 9-5 structure as a starting point
+            const weekStart = parseISO(weekStartDate);
+            const days = [0, 1, 2, 3, 4]; // Mon-Fri (offset from start which is Mon)
+            const defaultActivities = [
+                { timeSlot: "09:00", activity: "Deep Work", category: "work" as Category, color: "bg-blue-500" },
+                { timeSlot: "12:00", activity: "Lunch Break", category: "break" as Category, color: "bg-green-500" },
+                { timeSlot: "14:00", activity: "Meetings/Email", category: "work" as Category, color: "bg-purple-500" },
+            ];
+
+            days.forEach((dayOffset) => {
+                const date = addDays(weekStart, dayOffset);
+                defaultActivities.forEach((activity) => {
+                    newEntries.push({
+                        id: uuidv4(),
+                        date: format(date, "yyyy-MM-dd"),
+                        weekId: weekStartDate,
+                        timeSlot: activity.timeSlot,
+                        activity: activity.activity,
+                        category: activity.category,
+                        color: activity.color,
+                        completed: false,
+                    });
+                });
+            });
+        }
+
+        if (newEntries.length > 0) {
+            const newTimetable = [...state.timetable, ...newEntries];
+            const newInitializedWeeks = [...state.initializedWeeks, weekStartDate];
+
+            saveTimetable(newTimetable);
+            saveInitializedWeeks(newInitializedWeeks);
+
+            set({
+                timetable: newTimetable,
+                initializedWeeks: newInitializedWeeks,
+            });
+        } else {
+            // Even if we didn't add entries (e.g. empty previous week), mark as initialized
+            const newInitializedWeeks = [...state.initializedWeeks, weekStartDate];
+            saveInitializedWeeks(newInitializedWeeks);
+            set({ initializedWeeks: newInitializedWeeks });
+        }
+    },
 
     updateSettings: (updates) =>
         set((state) => {

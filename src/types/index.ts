@@ -21,6 +21,7 @@ export interface TimetableEntry {
     category: Category;
     color: string;
     date: string; // YYYY-MM-DD format
+    weekId?: string; // YYYY-MM-DD of the start of the week
     completed?: boolean;
 }
 
@@ -34,4 +35,5 @@ export interface AppData {
   timetable: TimetableEntry[];
   settings: AppSettings;
   notes: string;
+  initializedWeeks: string[]; // Track which weeks have been auto-initialized
 }

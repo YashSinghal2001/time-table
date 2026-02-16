@@ -12,6 +12,7 @@ const defaultData: AppData = {
   timetable: [],
   settings: defaultSettings,
   notes: '',
+  initializedWeeks: [],
 };
 
 export const loadData = (): AppData => {
@@ -25,7 +26,8 @@ export const loadData = (): AppData => {
     return {
         ...defaultData,
         ...data,
-        settings: { ...defaultSettings, ...data.settings }
+        settings: { ...defaultSettings, ...data.settings },
+        initializedWeeks: data.initializedWeeks || []
     };
   } catch (err) {
     console.error('Could not load data from local storage', err);
@@ -64,5 +66,11 @@ export const saveSettings = (settings: AppSettings) => {
 export const saveNotes = (notes: string) => {
   const data = loadData();
   data.notes = notes;
+  saveData(data);
+};
+
+export const saveInitializedWeeks = (initializedWeeks: string[]) => {
+  const data = loadData();
+  data.initializedWeeks = initializedWeeks;
   saveData(data);
 };
