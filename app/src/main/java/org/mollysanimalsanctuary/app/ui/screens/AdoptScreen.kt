@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +25,7 @@ import org.mollysanimalsanctuary.app.ui.SanctuaryViewModel
 import org.mollysanimalsanctuary.app.ui.components.PetCard
 import org.mollysanimalsanctuary.app.ui.components.ScreenHeader
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdoptScreen(viewModel: SanctuaryViewModel, onPetClick: (String) -> Unit) {
     val pets by viewModel.filteredPets.collectAsStateWithLifecycle()

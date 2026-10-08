@@ -27,6 +27,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -56,6 +57,7 @@ import org.mollysanimalsanctuary.app.ui.components.DropdownField
 import org.mollysanimalsanctuary.app.ui.components.ScreenHeader
 import org.mollysanimalsanctuary.app.ui.components.isValidIndianMobile
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RehomeScreen(viewModel: SanctuaryViewModel, onListed: (String) -> Unit) {
     val profile by viewModel.profile.collectAsStateWithLifecycle()
