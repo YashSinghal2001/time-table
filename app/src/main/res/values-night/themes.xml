@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.MollysAnimalSanctuary" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#1C1714</item>
+        <item name="android:windowBackground">#1C1714</item>
+    </style>
+</resources>
